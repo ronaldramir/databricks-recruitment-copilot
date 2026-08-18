@@ -89,12 +89,13 @@ Ejemplo de línea para el system prompt (ajustar cuando se construya):
 
 ## 7. Accesos obligatorios para el docente
 
-1. **GitHub:** agregar a `AndresACV` como colaborador con permiso de lectura (o dejar el repo público).
+1. **GitHub:** repo público — ya cumple el requisito de acceso de lectura para `AndresACV` sin necesidad de invitación explícita.
 2. **Gold / capa de consumo:** compartir el agente, dashboard o Genie Space con `andres.calvo5@ulatina.net` en modo lectura, o:
    ```sql
-   GRANT SELECT ON TABLE workspace.default.<apellido>_pf_gold_category_stats
+   GRANT SELECT ON TABLE recruitment_copilot.gold.gold_category_stats
    TO `andres.calvo5@ulatina.net`;
    ```
+   Catalog propio del proyecto (`recruitment_copilot`, schemas `bronze`/`silver`/`gold`) en vez de `workspace.default`, para no chocar con otros estudiantes en el catalog compartido de la clase.
 
 ## 8. Referencias
 
