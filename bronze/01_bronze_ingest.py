@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # MAGIC %md
 # MAGIC # Bronze — ingesta de currículums
 # MAGIC
@@ -20,7 +24,7 @@
 # MAGIC %md
 # MAGIC ## 1. Catalog, schemas y Volume de landing
 # MAGIC
-# MAGIC Proyecto propio con su catalog dedicado (mismo patrón que `instacart`), para no chocar con
+# MAGIC Proyecto propio con su catalog dedicado (mismo patrón que `instacart (proyecto del primer curso)`), para no chocar con
 # MAGIC otros estudiantes ni con otros proyectos. `IF NOT EXISTS` en todo — correr esta celda de nuevo
 # MAGIC no rompe nada.
 
@@ -52,7 +56,7 @@ spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.bronze.{LANDING_VOLUME}")
 # COMMAND ----------
 
 # MAGIC %pip install -q kaggle pypdf
-dbutils.library.restartPython()
+# MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
