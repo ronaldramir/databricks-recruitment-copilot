@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # MAGIC %md
 # MAGIC # Gold — métricas de negocio
 # MAGIC
@@ -82,11 +86,11 @@ display(spark.table(GOLD_TOP_CANDIDATES_TABLE).orderBy("category", "rank"))
 # MAGIC candidatos destacan dentro de cada una?**
 # MAGIC
 # MAGIC Sobre 2483 currículums en 24 categorías (1 currículum en cuarentena por no dar texto
-# MAGIC extraíble): las categorías con mayor `avg_leadership_score` son **Business-Development**
-# MAGIC (1.54), **Finance** (1.53) e **Information-Technology** (1.44) — currículums con más "led",
+# MAGIC extraíble): las categorías con mayor `avg_leadership_score` son **Digital-Media**
+# MAGIC (1.85), **Consultant** (1.67) y **Business-Development** (1.54) — currículums con más "led",
 # MAGIC "managed", "architected" y "founded" que "assisted", "supported" o "helped", consistente con
-# MAGIC roles orientados a gestión y liderazgo de iniciativas. En el otro extremo, **Sales** (-0.34) y
-# MAGIC **Accountant** (-0.25) promedian negativo — más lenguaje de rol de apoyo que de liderazgo,
+# MAGIC roles orientados a gestión y liderazgo de iniciativas. En el otro extremo, **Teacher** (-0.90),
+# MAGIC **Arts** (-0.40) y **Sales** (-0.34) promedian negativo — más lenguaje de rol de apoyo que de liderazgo,
 # MAGIC esperable en posiciones más operativas o individuales.
 # MAGIC
 # MAGIC Para un equipo de reclutamiento, esto sugiere priorizar la revisión manual en las categorías
@@ -94,6 +98,3 @@ display(spark.table(GOLD_TOP_CANDIDATES_TABLE).orderBy("category", "rank"))
 # MAGIC experiencia de liderazgo — y dentro de esas categorías, `gold_top_candidates` ya trae el
 # MAGIC ranking de por quién empezar.
 # MAGIC
-# MAGIC *(Los números exactos de esta celda salen de la corrida de `gold_category_stats` de más
-# MAGIC arriba — si al recorrer el pipeline te dan valores distintos, actualizá el párrafo con los
-# MAGIC tuyos antes de la presentación.)*
