@@ -1,0 +1,2 @@
+-- TODO: tabla candidate_shortlist en Lakebase (paralelo a schema_watchlist.sql en day-3).
+-- Columnas: email, resume_id, category, note, added_at.
