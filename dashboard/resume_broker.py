@@ -1,11 +1,10 @@
 """
-Gold-table reader for the recruiter MCP server and dashboard.
+Gold-table reader for the dashboard.
 
-Queries Unity Catalog Gold tables (recruitment_copilot.gold.*) through a SQL
-Warehouse using the Databricks SDK's Statement Execution API - the same
-WorkspaceClient auth already used for secrets (lakebase.py), so a Databricks
-App running this doesn't need any extra credentials beyond its own service
-principal having CAN_USE on the warehouse and SELECT on the Gold schema.
+Identical to mcp_server/resume_broker.py - duplicated here for the same
+reason as dashboard/lakebase.py (each Databricks App is its own independent
+bundle). The dashboard only calls get_category_stats, but the full module is
+kept so it stays a drop-in copy of the MCP server's version.
 """
 
 import os
@@ -21,10 +20,6 @@ CATALOG = os.environ.get("GOLD_CATALOG", "recruitment_copilot")
 _CATEGORY_STATS_TABLE = f"{CATALOG}.gold.gold_category_stats"
 _TOP_CANDIDATES_TABLE = f"{CATALOG}.gold.gold_top_candidates"
 
-# Category values only ever come from the dataset's fixed label set (upper
-# case letters and hyphens) - validated here because they get interpolated
-# straight into SQL below (the Statement Execution API used by _query has no
-# built-in bind-parameter helper as simple as psycopg2's).
 _SAFE_CATEGORY = re.compile(r"^[A-Za-z\-]+$")
 
 
