@@ -17,7 +17,10 @@ import getpass
 
 w = WorkspaceClient()
 
-w.secrets.create_scope(scope="kaggle")
+existing_scopes = {s.name for s in w.secrets.list_scopes()}
+if "kaggle" not in existing_scopes:
+    w.secrets.create_scope(scope="kaggle")
+
 w.secrets.put_secret(
     scope="kaggle",
     key="username",
@@ -34,3 +37,7 @@ w.secrets.put_acl(
     principal="users",
     permission=workspace.AclPermission.READ,
 )
+
+stored_keys = {s.key for s in w.secrets.list_secrets(scope="kaggle")}
+assert {"username", "key"} <= stored_keys, f"Faltaron llaves: {stored_keys}"
+print(f"OK - scope 'kaggle' listo con las llaves: {sorted(stored_keys)}")
