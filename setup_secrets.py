@@ -38,11 +38,6 @@ w.secrets.put_acl(
     permission=workspace.AclPermission.READ,
 )
 
-<<<<<<< Updated upstream
 stored_keys = {s.key for s in w.secrets.list_secrets(scope="kaggle")}
 assert {"username", "key"} <= stored_keys, f"Faltaron llaves: {stored_keys}"
 print(f"OK - scope 'kaggle' listo con las llaves: {sorted(stored_keys)}")
-=======
-
-dbutils.secrets.list("kaggle")
->>>>>>> Stashed changes
