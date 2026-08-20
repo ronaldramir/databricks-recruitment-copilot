@@ -107,7 +107,7 @@ Nunca redondees los números a ojo ni los inventes — citá siempre los valores
 
 ### Fase B — pasos manuales en tu workspace de Databricks (Free Edition)
 
-**Checkpoint 2026-08-19:** pasos 1–7 completos. Vector Search endpoint (`recruitment_copilot_vs`) e índice (`silver_resumes_index`) creados, en estado **"Waiting for initial sync"** — ya aprovisionó recursos, ahora sincronizando ~2483 filas; puede tardar varios minutos más en pasar a Online. **Retomar por el paso 8** (desplegar `mcp_server/`) — no hace falta esperar a que el índice esté Online para desplegar la App, solo para que `find_matching_resumes` funcione en runtime.
+**Checkpoint 2026-08-19 (noche):** pasos 1–9 completos, `dashboard` validado de punta a punta en producción (categorías, shortlist y match semántico los tres funcionando). **Retomar por el paso 10** (registrar el MCP en AI Gateway).
 
 1. [x] **Provisionar Lakebase**: Compute → OLTP Database → Create. Copiar la connection URL.
 2. [x] **Correr `mcp_server/schema_shortlist.sql`** contra esa instancia — desde el **SQL Editor de Databricks** o `psql` local. **No** lo corras con `psycopg2` desde un notebook serverless: Free Edition rompe `psycopg2` ahí con `FATAL FIPS SELFTEST FAILURE`.
@@ -121,7 +121,7 @@ Nunca redondees los números a ojo ni los inventes — citá siempre los valores
 6. [x] **Crear el Delta Sync Index** sobre `silver_resumes` — columna de embedding `clean_text`, PK `resume_id`, columnas indexadas: todas (en blanco) — nombrado `recruitment_copilot.silver.silver_resumes_index`. *Verificar que el status haya pasado de "Provisioning" a "Online" antes de probar `find_matching_resumes`.*
 7. [x] **Conseguir el ID de tu SQL Warehouse** y reemplazar `REPLACE_WITH_YOUR_WAREHOUSE_ID` en `mcp_server/app.yaml` y `dashboard/app.yaml` (ya hecho: `f6d25ff69fb4c394`).
 8. [x] **Desplegar `mcp_server/`** como Databricks App (`recruiter-mcp`), source = `mcp_server/`. Crasheó una vez con `ModuleNotFoundError: databricks.vectorsearch` — el paquete `databricks-vectorsearch` expone el módulo como `databricks.vector_search` (guion bajo); corregido en `mcp_server/vector_search.py` y `dashboard/vector_search.py` (commit `fc4b37e`). Redesplegada, status **Running**.
-9. [x] **Desplegar `dashboard/`** como una **segunda** Databricks App, source = `dashboard/`. Free Edition permite hasta 3 Apps — esto usa 2.
+9. [x] **Desplegar `dashboard/`** como una **segunda** Databricks App, source = `dashboard/`. Free Edition permite hasta 3 Apps — esto usa 2. Encontró y resolvió 3 bugs en producción (ver Known limitations): permisos de Unity Catalog faltantes sobre Gold/Silver, `resume_broker.py` no esperaba a que el statement terminara, y `VectorSearchClient` sin credenciales explícitas. Las tres tablas del dashboard (categorías, shortlist, match semántico) validadas funcionando.
 10. [ ] **← PRÓXIMO PASO. Registrar el MCP server**: AI Gateway → MCPs → Add MCP, pegar la URL streamable-HTTP de la App del MCP server (copiarla de la pantalla de `recruiter-mcp`).
 11. [ ] **Construir y validar el agente en el Playground**: Tools → seleccionar el MCP recién registrado → pegar el system prompt de arriba → probar con preguntas reales → pegar los transcripts en "Demo Q&A" abajo. Una vez validado: Get Code → Export to Databricks Apps.
 12. [ ] Abrir la App del dashboard y confirmar que el shortlist armado por el agente se ve ahí.
@@ -145,6 +145,9 @@ _Pegar acá al menos 3 preguntas reales y la respuesta del agente (con sus tool 
 _Errores encontrados durante las pruebas y cómo se resolvieron (o por qué no) — sección 9 de la rúbrica pide documentar esto explícitamente._
 
 - **`ModuleNotFoundError: databricks.vectorsearch` al desplegar `recruiter-mcp`:** el paquete `databricks-vectorsearch` (`requirements.txt`) expone el módulo como `databricks.vector_search` (con guion bajo), no `databricks.vectorsearch`. Afectaba tanto a `mcp_server/vector_search.py` como a `dashboard/vector_search.py`. Resuelto cambiando el import a `from databricks.vector_search.client import VectorSearchClient`.
+- **`INSUFFICIENT_PRIVILEGES` / `USE SCHEMA` al leer Gold desde el dashboard:** el service principal de cada Databricks App necesita grants explícitos de Unity Catalog (`USE CATALOG`, `USE SCHEMA`, `SELECT`) sobre `recruitment_copilot.gold`/`.silver` — declarar el SQL Warehouse o el índice como "Resource" de la App solo le da acceso al *cómputo*, no a los datos. Resuelto otorgando los grants a los service principals de `recruiter-mcp` y `dashboard` vía Catalog Explorer.
+- **`'NoneType' object has no attribute 'schema'` en `resume_broker._query`:** `execute_statement(..., wait_timeout="30s")` puede volver con el statement todavía en `PENDING`/`RUNNING` si el warehouse serverless está arrancando en frío, dejando `response.manifest` en `None`. Resuelto pollendo con `get_statement` hasta un estado terminal antes de leer `manifest`/`result`.
+- **`Please specify either personal access token or service principal client ID and secret` en Vector Search:** `VectorSearchClient()` sin argumentos solo auto-detecta credenciales dentro de un notebook de Databricks, no dentro de una Databricks App. Resuelto pasándole explícitamente `service_principal_client_id`/`_secret` desde las env vars que Databricks Apps ya inyecta (`DATABRICKS_CLIENT_ID`/`DATABRICKS_CLIENT_SECRET`), y el `workspace_url` resuelto vía `WorkspaceClient().config.host`.
 
 ## Plan completo
 
