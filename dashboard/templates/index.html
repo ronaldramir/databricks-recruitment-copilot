@@ -121,7 +121,12 @@ async function runMatch() {
       body: JSON.stringify({ job_description: jobDescription, limit: 10 }),
     });
     const matches = await res.json();
-    if (!Array.isArray(matches) || matches.length === 0) {
+    if (!Array.isArray(matches)) {
+      const message = matches && matches.error ? matches.error : "respuesta inesperada del servidor";
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">Error: ${message}</td></tr>`;
+      return;
+    }
+    if (matches.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" class="empty">Sin resultados.</td></tr>';
       return;
     }
