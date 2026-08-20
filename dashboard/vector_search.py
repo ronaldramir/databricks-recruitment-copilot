@@ -9,7 +9,7 @@ the one-time index setup steps.
 
 import os
 
-from databricks.vectorsearch import VectorSearchClient
+from databricks.vector_search.client import VectorSearchClient
 
 INDEX_NAME = os.environ.get(
     "VECTOR_SEARCH_INDEX", "recruitment_copilot.silver.silver_resumes_index"

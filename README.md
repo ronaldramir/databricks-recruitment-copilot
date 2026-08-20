@@ -107,7 +107,7 @@ Nunca redondees los números a ojo ni los inventes — citá siempre los valores
 
 ### Fase B — pasos manuales en tu workspace de Databricks (Free Edition)
 
-**Checkpoint 2026-08-18:** pasos 1–7 completos. Vector Search endpoint (`recruitment_copilot_vs`) e índice (`silver_resumes_index`) creados, en estado **"Provisioning resources..."** — puede tardar varios minutos en pasar a Online (recién creado + primera sincronización de ~2483 filas). **Retomar por el paso 8** (desplegar `mcp_server/`) — no hace falta esperar a que el índice esté Online para desplegar la App, solo para que `find_matching_resumes` funcione en runtime.
+**Checkpoint 2026-08-19:** pasos 1–7 completos. Vector Search endpoint (`recruitment_copilot_vs`) e índice (`silver_resumes_index`) creados, en estado **"Waiting for initial sync"** — ya aprovisionó recursos, ahora sincronizando ~2483 filas; puede tardar varios minutos más en pasar a Online. **Retomar por el paso 8** (desplegar `mcp_server/`) — no hace falta esperar a que el índice esté Online para desplegar la App, solo para que `find_matching_resumes` funcione en runtime.
 
 1. [x] **Provisionar Lakebase**: Compute → OLTP Database → Create. Copiar la connection URL.
 2. [x] **Correr `mcp_server/schema_shortlist.sql`** contra esa instancia — desde el **SQL Editor de Databricks** o `psql` local. **No** lo corras con `psycopg2` desde un notebook serverless: Free Edition rompe `psycopg2` ahí con `FATAL FIPS SELFTEST FAILURE`.
