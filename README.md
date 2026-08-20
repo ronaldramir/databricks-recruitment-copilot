@@ -120,9 +120,9 @@ Nunca redondees los números a ojo ni los inventes — citá siempre los valores
 5. [x] **Crear un Vector Search endpoint** (`recruitment_copilot_vs`).
 6. [x] **Crear el Delta Sync Index** sobre `silver_resumes` — columna de embedding `clean_text`, PK `resume_id`, columnas indexadas: todas (en blanco) — nombrado `recruitment_copilot.silver.silver_resumes_index`. *Verificar que el status haya pasado de "Provisioning" a "Online" antes de probar `find_matching_resumes`.*
 7. [x] **Conseguir el ID de tu SQL Warehouse** y reemplazar `REPLACE_WITH_YOUR_WAREHOUSE_ID` en `mcp_server/app.yaml` y `dashboard/app.yaml` (ya hecho: `f6d25ff69fb4c394`).
-8. [ ] **← PRÓXIMO PASO. Desplegar `mcp_server/`** como Databricks App: Compute → Apps → Create app → Custom, source = `mcp_server/` (dentro del Git Folder — hacer **Pull** primero para traer el `SQL_WAREHOUSE_ID` actualizado). Nombre sugerido: `recruiter-mcp`.
-9. [ ] **Desplegar `dashboard/`** como una **segunda** Databricks App, source = `dashboard/`. Free Edition permite hasta 3 Apps — esto usa 2.
-10. [ ] **Registrar el MCP server**: AI Gateway → MCPs → Add MCP, pegar la URL streamable-HTTP de la App del MCP server.
+8. [x] **Desplegar `mcp_server/`** como Databricks App (`recruiter-mcp`), source = `mcp_server/`. Crasheó una vez con `ModuleNotFoundError: databricks.vectorsearch` — el paquete `databricks-vectorsearch` expone el módulo como `databricks.vector_search` (guion bajo); corregido en `mcp_server/vector_search.py` y `dashboard/vector_search.py` (commit `fc4b37e`). Redesplegada, status **Running**.
+9. [ ] **← PRÓXIMO PASO. Desplegar `dashboard/`** como una **segunda** Databricks App, source = `dashboard/`. Free Edition permite hasta 3 Apps — esto usa 2.
+10. [ ] **Registrar el MCP server**: AI Gateway → MCPs → Add MCP, pegar la URL streamable-HTTP de la App del MCP server (copiarla de la pantalla de `recruiter-mcp`).
 11. [ ] **Construir y validar el agente en el Playground**: Tools → seleccionar el MCP recién registrado → pegar el system prompt de arriba → probar con preguntas reales → pegar los transcripts en "Demo Q&A" abajo. Una vez validado: Get Code → Export to Databricks Apps.
 12. [ ] Abrir la App del dashboard y confirmar que el shortlist armado por el agente se ve ahí.
 13. [ ] **Free Edition auto-detiene las Apps a las 24h de inactividad** — reiniciar `mcp_server`, `dashboard` y el agente exportado antes del check-in (24 ago) y la presentación (26 ago).
@@ -143,6 +143,8 @@ _Pegar acá al menos 3 preguntas reales y la respuesta del agente (con sus tool 
 ## Known limitations
 
 _Errores encontrados durante las pruebas y cómo se resolvieron (o por qué no) — sección 9 de la rúbrica pide documentar esto explícitamente._
+
+- **`ModuleNotFoundError: databricks.vectorsearch` al desplegar `recruiter-mcp`:** el paquete `databricks-vectorsearch` (`requirements.txt`) expone el módulo como `databricks.vector_search` (con guion bajo), no `databricks.vectorsearch`. Afectaba tanto a `mcp_server/vector_search.py` como a `dashboard/vector_search.py`. Resuelto cambiando el import a `from databricks.vector_search.client import VectorSearchClient`.
 
 ## Plan completo
 
