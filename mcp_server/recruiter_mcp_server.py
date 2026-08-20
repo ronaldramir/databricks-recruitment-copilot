@@ -46,8 +46,18 @@ _request_context: ContextVar[dict] = ContextVar("request_context", default={})
 
 
 def _get_end_user_email() -> str:
-    """Get the actual end user's email from request headers, or fallback to service principal."""
+    """Get the actual end user's email from request headers, or fallback to service principal.
+
+    Databricks Apps forwards two different headers: x-forwarded-user is an opaque
+    user ID (a UUID), x-forwarded-email is the actual email - candidate_shortlist.email
+    needs the latter. Check email first so a present-but-empty x-forwarded-email
+    doesn't fall through to the ID by accident.
+    """
     headers = _request_context.get()
+    forwarded_email = headers.get("x-forwarded-email")
+    if forwarded_email:
+        return forwarded_email
+
     forwarded_user = headers.get("x-forwarded-user")
     if forwarded_user:
         return forwarded_user
