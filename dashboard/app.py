@@ -17,10 +17,11 @@ Run locally:
 
 import os
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 
 import lakebase
 import resume_broker
+import vector_search
 
 app = Flask(__name__)
 
@@ -49,6 +50,15 @@ def index():
 def api_category_stats():
     """gold_category_stats, highest leadership signal first."""
     return jsonify(resume_broker.get_category_stats())
+
+
+@app.route("/api/match_resumes", methods=["POST"])
+def api_match_resumes():
+    """Semantic search over silver_resumes for a pasted job description."""
+    body = request.get_json(silent=True) or {}
+    job_description = body.get("job_description", "")
+    limit = body.get("limit", 10)
+    return jsonify(vector_search.find_matching_resumes(job_description, limit))
 
 
 @app.route("/api/shortlist")

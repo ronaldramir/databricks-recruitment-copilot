@@ -68,11 +68,15 @@ Ejemplo de línea para el system prompt (ajustar cuando se construya):
 
 > Sos un copiloto de reclutamiento. Tu trabajo es *sugerir* candidatos para revisión, nunca decidir por tu cuenta. Cuando uses `shortlist_candidate`, explicá siempre por qué ese currículum merece revisión humana. Nunca rechaces ni "descartes" candidatos — esa decisión es exclusivamente humana.
 
-## 5. Vector Search (opcional — se va a intentar, no bloquea el rúbrico)
+## 5. Vector Search (implementado — Databricks Vector Search nativo)
 
-- **Qué es:** búsqueda por similitud semántica (embeddings) en vez de por palabras exactas. Un *Delta Sync Index* apunta a una columna de texto de una tabla Delta; Databricks calcula los embeddings y mantiene el índice sincronizado automáticamente.
-- **Cómo encajaría:** indexar `silver_resumes.clean_text`, y agregar una tool nueva al MCP server: `find_matching_resumes(job_description)` — devuelve los currículums más parecidos semánticamente a una descripción de vacante.
-- **Cuándo construirlo:** es la última pieza, solo después de que el pipeline core (bronze/silver/gold) y el agente básico (con `leadership_score` heurístico) ya funcionen de punta a punta. Si no alcanza el tiempo, el heurístico ya cumple el requisito de columna derivada — esto es un plus, no un bloqueante.
+- **Qué es:** búsqueda por similitud semántica (embeddings) en vez de por palabras exactas. Un *Delta Sync Index* apunta a `silver_resumes.clean_text`; Databricks calcula los embeddings (modelo hosteado, sin `sentence-transformers` local) y mantiene el índice sincronizado automáticamente cada vez que Silver cambia.
+- **Decisión frente al patrón de `day-3`:** ese proyecto usa `sentence-transformers` + pgvector en Lakebase (embeddings calculados y guardados a mano). Acá se optó por Vector Search nativo en su lugar — cero dependencias pesadas en la App, sync automático, y es la feature que el módulo del curso ya documenta. Lakebase sigue siendo solo para `candidate_shortlist`, sin ningún cambio.
+- **Cómo quedó armado:** `mcp_server/vector_search.py` y `dashboard/vector_search.py` (idénticos, uno por App) consultan el índice `recruitment_copilot.silver.silver_resumes_index` vía `VectorSearchClient`. Expuesto como tool `find_matching_resumes(job_description, limit)` en el MCP server (para el agente) **y** como caja de búsqueda en el dashboard (`/api/match_resumes`) — esto último es un extra que `day-3` no tenía: ahí el score de similitud solo lo veía el agente, nunca se mostraba en una UI.
+- **Setup pendiente (una sola vez, en Databricks):**
+  1. `ALTER TABLE recruitment_copilot.silver.silver_resumes SET TBLPROPERTIES (delta.enableChangeDataFeed = true);` (requisito para un Delta Sync Index).
+  2. Crear un Vector Search endpoint.
+  3. Crear el Delta Sync Index sobre `silver_resumes`, columna de embedding `clean_text`, PK `resume_id`, columna extra `category`.
 - Referencia: [Databricks Vector Search — documentación oficial](https://docs.databricks.com/aws/en/vector-search/vector-search)
 
 ## 6. Plan de trabajo (14–26 de agosto de 2026)

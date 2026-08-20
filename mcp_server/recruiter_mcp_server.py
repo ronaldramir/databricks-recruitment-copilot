@@ -36,6 +36,7 @@ from starlette.requests import Request
 
 import lakebase
 import resume_broker
+import vector_search
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("recruiter-mcp-server")
@@ -112,6 +113,32 @@ def search_resumes(category: str | None = None, limit: int = 20) -> dict:
         }
     except Exception as e:
         logger.exception("Failed to search resumes")
+        return {"status": "error", "message": str(e)}
+
+
+@mcp.tool
+def find_matching_resumes(job_description: str, limit: int = 10) -> dict:
+    """
+    Semantic search: find résumés whose content best matches a job
+    description, using Databricks Vector Search over the Gold/Silver layer
+    (semantic similarity, not keyword matching).
+
+    Args:
+        job_description: Free-text description of the role to match
+            candidates against.
+        limit: Max number of results (default 10, max 50).
+
+    Returns:
+        A dict with a `matches` list, each entry: resume_id, category,
+        match_score (0-1, higher is more similar), snippet.
+    """
+    try:
+        return {
+            "status": "success",
+            "matches": vector_search.find_matching_resumes(job_description, limit),
+        }
+    except Exception as e:
+        logger.exception("Failed to find matching resumes")
         return {"status": "error", "message": str(e)}
 
 

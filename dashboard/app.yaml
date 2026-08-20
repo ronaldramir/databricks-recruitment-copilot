@@ -16,3 +16,5 @@ env:
     value: "REPLACE_WITH_YOUR_WAREHOUSE_ID"
   - name: GOLD_CATALOG
     value: "recruitment_copilot"
+  - name: VECTOR_SEARCH_INDEX
+    value: "recruitment_copilot.silver.silver_resumes_index"
