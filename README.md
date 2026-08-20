@@ -45,14 +45,14 @@ Orquestación: Job de Databricks con 3 tareas encadenadas (`bronze → silver �
            └──► lakebase.py       ──► Lakebase Postgres: candidate_shortlist
 
  dashboard/app.py   (Flask, Databricks App SEPARADA — nunca escribe)
-           └──► copias propias de lakebase.py / resume_broker.py / vector_search.py
+           └──► copias propias de lakebase.py / resume_broker.py
 ```
 
 - `mcp_server/recruiter_mcp_server.py` — el MCP server. Expone las tools vía `@mcp.tool`, transporte streamable-HTTP. Toda la lógica vive en los módulos de abajo.
 - `mcp_server/resume_broker.py` — lee `gold_category_stats`/`gold_top_candidates` vía la Statement Execution API del SDK de Databricks (sin Spark — una Databricks App no tiene sesión de Spark).
 - `mcp_server/vector_search.py` — matching semántico vía `VectorSearchClient` sobre un Delta Sync Index (Databricks calcula y sincroniza los embeddings solo; no hay modelo local que cargar, a diferencia del patrón pgvector + `sentence-transformers` de `databricks-lakebase-app-day-3`).
 - `mcp_server/lakebase.py` — conexión a Lakebase (Postgres administrado por Databricks), mismo patrón que el proyecto de referencia.
-- `dashboard/app.py` — dashboard de solo lectura (su propia Databricks App), con copias propias de los tres módulos de arriba — cada App se despliega de forma independiente desde su propia carpeta, así que la duplicación es deliberada, no un descuido.
+- `dashboard/app.py` — dashboard de solo lectura (su propia Databricks App), con copias propias de `lakebase.py`/`resume_broker.py` — cada App se despliega de forma independiente desde su propia carpeta, así que la duplicación es deliberada, no un descuido. **Deliberadamente no expone `find_matching_resumes`**: el matching semántico vive solo como tool del agente, así hay un único lugar para buscar candidatos por descripción de vacante, no dos interfaces compitiendo por el mismo trabajo. El dashboard existe para mostrar lo que el agente ya decidió (shortlist), no para buscar en paralelo.
 
 ## Tools del agente
 
@@ -108,6 +108,8 @@ Nunca redondees los números a ojo ni los inventes — citá siempre los valores
 ### Fase B — pasos manuales en tu workspace de Databricks (Free Edition)
 
 **Checkpoint 2026-08-19 (noche):** pasos 1–9 completos, `dashboard` validado de punta a punta en producción (categorías, shortlist y match semántico los tres funcionando). **Retomar por el paso 10** (registrar el MCP en AI Gateway).
+
+**Checkpoint 2026-08-19 (más tarde):** se sacó la caja de match semántico del `dashboard` (`/api/match_resumes`, `dashboard/vector_search.py`) — quedaba como una segunda interfaz de búsqueda que competía con la tool `find_matching_resumes` del agente, en vez de reforzar el patrón "el agente actúa, el dashboard solo muestra lo que hizo". El dashboard ahora solo lee categorías (Gold, como contexto) y el shortlist (Lakebase, para ver en vivo lo que el agente marcó) — el matching semántico existe únicamente como tool del agente. Falta redesplegar la App del dashboard con este cambio antes de la demo.
 
 1. [x] **Provisionar Lakebase**: Compute → OLTP Database → Create. Copiar la connection URL.
 2. [x] **Correr `mcp_server/schema_shortlist.sql`** contra esa instancia — desde el **SQL Editor de Databricks** o `psql` local. **No** lo corras con `psycopg2` desde un notebook serverless: Free Edition rompe `psycopg2` ahí con `FATAL FIPS SELFTEST FAILURE`.

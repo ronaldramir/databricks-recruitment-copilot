@@ -9,6 +9,12 @@ has flagged for human review. Also doubles as the red-of-safety-net view
 mentioned in PLAN.md if the agent/MCP server doesn't get finished in time -
 gold_category_stats alone already answers the business question.
 
+Deliberately does NOT expose semantic matching (find_matching_resumes): that
+capability only exists as an agent tool in recruiter_mcp_server.py, so there
+is exactly one place to search candidates by job description, not two. This
+dashboard's only job is to show what the agent already did, not to compete
+with it as a second search UI.
+
 Deploy this as its OWN Databricks App (separate from recruiter_mcp_server.py).
 
 Run locally:
@@ -17,11 +23,10 @@ Run locally:
 
 import os
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template
 
 import lakebase
 import resume_broker
-import vector_search
 
 app = Flask(__name__)
 
@@ -50,15 +55,6 @@ def index():
 def api_category_stats():
     """gold_category_stats, highest leadership signal first."""
     return jsonify(resume_broker.get_category_stats())
-
-
-@app.route("/api/match_resumes", methods=["POST"])
-def api_match_resumes():
-    """Semantic search over silver_resumes for a pasted job description."""
-    body = request.get_json(silent=True) or {}
-    job_description = body.get("job_description", "")
-    limit = body.get("limit", 10)
-    return jsonify(vector_search.find_matching_resumes(job_description, limit))
 
 
 @app.route("/api/shortlist")

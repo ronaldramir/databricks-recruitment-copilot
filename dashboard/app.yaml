@@ -16,5 +16,3 @@ env:
     value: "f6d25ff69fb4c394"
   - name: GOLD_CATALOG
     value: "recruitment_copilot"
-  - name: VECTOR_SEARCH_INDEX
-    value: "recruitment_copilot.silver.silver_resumes_index"

@@ -18,26 +18,11 @@
   .note { color: #c7cbd1; }
   .snippet { color: #9aa0a6; font-size: 0.85rem; }
   #status { font-size: 0.8rem; color: #6b7079; }
-  textarea { width: 100%; min-height: 5rem; background: #171a20; color: #e6e6e6; border: 1px solid #2a2d34; border-radius: 6px; padding: 0.6rem; font-family: inherit; box-sizing: border-box; }
-  button { margin-top: 0.6rem; padding: 0.5rem 1.2rem; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
-  button:disabled { background: #3a3f4a; cursor: default; }
-  .match-score { font-weight: 600; }
 </style>
 </head>
 <body>
   <h1>Recruitment Copilot</h1>
-  <p class="subtitle">Vista de solo lectura — el agente sugiere y anota, nunca decide. <span id="status"></span></p>
-
-  <h2>Buscar candidatos por descripción de vacante</h2>
-  <textarea id="job-description" placeholder="Pegá la descripción del puesto acá..."></textarea>
-  <br>
-  <button id="match-btn">Buscar match semántico</button>
-  <table id="match-table" style="margin-top: 1rem;">
-    <thead>
-      <tr><th>Résumé ID</th><th>Categoría</th><th>Match</th><th>Fragmento</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <p class="subtitle">Vista de solo lectura de lo que hizo el agente — el agente sugiere y anota, nunca decide. <span id="status"></span></p>
 
   <h2>Categorías (Gold)</h2>
   <table id="category-table">
@@ -104,50 +89,6 @@ function renderShortlist(rows) {
     tbody.appendChild(tr);
   }
 }
-
-async function runMatch() {
-  const btn = document.getElementById("match-btn");
-  const jobDescription = document.getElementById("job-description").value.trim();
-  const tbody = document.querySelector("#match-table tbody");
-  if (!jobDescription) return;
-
-  btn.disabled = true;
-  btn.textContent = "Buscando...";
-  tbody.innerHTML = "";
-  try {
-    const res = await fetch("/api/match_resumes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ job_description: jobDescription, limit: 10 }),
-    });
-    const matches = await res.json();
-    if (!Array.isArray(matches)) {
-      const message = matches && matches.error ? matches.error : "respuesta inesperada del servidor";
-      tbody.innerHTML = `<tr><td colspan="4" class="empty">Error: ${message}</td></tr>`;
-      return;
-    }
-    if (matches.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty">Sin resultados.</td></tr>';
-      return;
-    }
-    for (const m of matches) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${m.resume_id}</td>
-        <td>${m.category}</td>
-        <td class="match-score">${(m.match_score * 100).toFixed(1)}%</td>
-        <td class="snippet">${m.snippet}…</td>`;
-      tbody.appendChild(tr);
-    }
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">Error: ${err}</td></tr>`;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Buscar match semántico";
-  }
-}
-
-document.getElementById("match-btn").addEventListener("click", runMatch);
 
 refresh();
 setInterval(refresh, 5000);
