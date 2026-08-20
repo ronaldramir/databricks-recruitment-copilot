@@ -123,6 +123,7 @@ async function runMatch() {
     const matches = await res.json();
     if (!Array.isArray(matches) || matches.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" class="empty">Sin resultados.</td></tr>';
+      return;
     }
     for (const m of matches) {
       const tr = document.createElement("tr");

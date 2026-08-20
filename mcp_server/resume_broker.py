@@ -10,8 +10,10 @@ principal having CAN_USE on the warehouse and SELECT on the Gold schema.
 
 import os
 import re
+import time
 
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.sql import StatementState
 
 _w = WorkspaceClient()
 
@@ -35,6 +37,15 @@ def _query(sql: str) -> list[dict]:
         statement=sql,
         wait_timeout="30s",
     )
+    while response.status.state in (StatementState.PENDING, StatementState.RUNNING):
+        time.sleep(1)
+        response = _w.statement_execution.get_statement(response.statement_id)
+
+    if response.status.state != StatementState.SUCCEEDED:
+        error = response.status.error
+        message = error.message if error else response.status.state
+        raise RuntimeError(f"Query failed ({response.status.state}): {message}")
+
     columns = [c.name for c in response.manifest.schema.columns]
     rows = response.result.data_array or []
     return [dict(zip(columns, row)) for row in rows]
