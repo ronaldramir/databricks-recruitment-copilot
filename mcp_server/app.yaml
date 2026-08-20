@@ -13,7 +13,7 @@ env:
   - name: LAKEBASE_SECRET_KEY
     value: "lakebase-url"
   - name: SQL_WAREHOUSE_ID
-    value: "REPLACE_WITH_YOUR_WAREHOUSE_ID"
+    value: "f6d25ff69fb4c394"
   - name: GOLD_CATALOG
     value: "recruitment_copilot"
   - name: VECTOR_SEARCH_INDEX
