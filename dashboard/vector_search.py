@@ -9,6 +9,7 @@ the one-time index setup steps.
 
 import os
 
+from databricks.sdk import WorkspaceClient
 from databricks.vector_search.client import VectorSearchClient
 
 INDEX_NAME = os.environ.get(
@@ -19,9 +20,20 @@ _client: VectorSearchClient | None = None
 
 
 def _get_client() -> VectorSearchClient:
+    """VectorSearchClient only auto-detects credentials inside a Databricks
+    notebook - a Databricks App needs the service principal creds Databricks
+    injects into the app runtime (DATABRICKS_CLIENT_ID/_SECRET) passed in
+    explicitly. Reuse WorkspaceClient's already-working host resolution
+    instead of relying on a DATABRICKS_HOST env var that may not be set."""
     global _client
     if _client is None:
-        _client = VectorSearchClient()
+        host = WorkspaceClient().config.host
+        _client = VectorSearchClient(
+            workspace_url=host,
+            service_principal_client_id=os.environ["DATABRICKS_CLIENT_ID"],
+            service_principal_client_secret=os.environ["DATABRICKS_CLIENT_SECRET"],
+            disable_notice=True,
+        )
     return _client
 
 
