@@ -173,7 +173,7 @@ def get_shortlist(limit: int = 100, job_title: str | None = None) -> dict:
         rows = lakebase.run_query(
             """
             SELECT resume_id, category, job_title, job_description, note,
-                   email AS added_by, added_at
+                   recruiter_email AS added_by, added_at
             FROM candidate_shortlist
             WHERE %(job_title)s IS NULL OR job_title = %(job_title)s
             ORDER BY added_at DESC
@@ -235,9 +235,9 @@ def shortlist_candidate(
         lakebase.run_write(
             """
             INSERT INTO candidate_shortlist
-                (email, resume_id, category, job_title, job_description, note, added_at)
+                (recruiter_email, resume_id, category, job_title, job_description, note, added_at)
             VALUES (%s, %s, %s, %s, %s, %s, NOW())
-            ON CONFLICT (email, resume_id, job_title)
+            ON CONFLICT (recruiter_email, resume_id, job_title)
             DO UPDATE SET
                 job_description = EXCLUDED.job_description,
                 note = EXCLUDED.note,

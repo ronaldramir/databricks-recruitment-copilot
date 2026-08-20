@@ -53,7 +53,7 @@ def api_shortlist():
     rows = lakebase.run_query(
         """
         SELECT resume_id, category, job_title, job_description, note,
-               email AS added_by, added_at
+               recruiter_email AS added_by, added_at
         FROM candidate_shortlist
         ORDER BY added_at DESC
         """
