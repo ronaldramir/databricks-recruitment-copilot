@@ -2,18 +2,15 @@
 Recruiter dashboard: a small Flask app to WATCH the candidate shortlist the
 Agent Bricks agent is building via the recruiter MCP server
 (recruiter_mcp_server.py). This app never shortlists anyone itself - it only
-reads candidate_shortlist from Lakebase (via lakebase.py) and
-gold_category_stats from Unity Catalog (via resume_broker.py), so it can run
+reads candidate_shortlist from Lakebase (via lakebase.py), so it can run
 side-by-side with the MCP server and show, in near real time, what the agent
-has flagged for human review. Also doubles as the red-of-safety-net view
-mentioned in PLAN.md if the agent/MCP server doesn't get finished in time -
-gold_category_stats alone already answers the business question.
+has flagged for human review, for which role, and why.
 
-Deliberately does NOT expose semantic matching (find_matching_resumes): that
-capability only exists as an agent tool in recruiter_mcp_server.py, so there
-is exactly one place to search candidates by job description, not two. This
-dashboard's only job is to show what the agent already did, not to compete
-with it as a second search UI.
+Deliberately does NOT expose gold_category_stats or semantic matching
+(find_matching_resumes): category-level reporting belongs to a BI tool
+pointed straight at Gold (a Genie Space, not custom code), and semantic
+search only exists as an agent tool. This dashboard's only job is to show
+what the agent already did, not to compete with it as a second search/BI UI.
 
 Deploy this as its OWN Databricks App (separate from recruiter_mcp_server.py).
 
@@ -26,7 +23,6 @@ import os
 from flask import Flask, jsonify, render_template
 
 import lakebase
-import resume_broker
 
 app = Flask(__name__)
 
@@ -47,14 +43,8 @@ def handle_exception(err):
 
 @app.route("/")
 def index():
-    """Dashboard UI: category stats + the live shortlist."""
+    """Dashboard UI: the live shortlist."""
     return render_template("index.html")
-
-
-@app.route("/api/category_stats")
-def api_category_stats():
-    """gold_category_stats, highest leadership signal first."""
-    return jsonify(resume_broker.get_category_stats())
 
 
 @app.route("/api/shortlist")
@@ -62,7 +52,8 @@ def api_shortlist():
     """Current candidate_shortlist from Lakebase, most recently flagged first."""
     rows = lakebase.run_query(
         """
-        SELECT resume_id, category, note, email AS added_by, added_at
+        SELECT resume_id, category, job_title, job_description, note,
+               email AS added_by, added_at
         FROM candidate_shortlist
         ORDER BY added_at DESC
         """

@@ -17,6 +17,9 @@
   .empty { color: #6b7079; font-style: italic; padding: 1rem 0; }
   .note { color: #c7cbd1; }
   .snippet { color: #9aa0a6; font-size: 0.85rem; }
+  .jd-toggle { color: #6b7079; cursor: pointer; font-size: 0.8rem; text-decoration: underline; }
+  .jd-full { color: #9aa0a6; font-size: 0.85rem; white-space: pre-wrap; margin-top: 0.35rem; display: none; }
+  .jd-full.open { display: block; }
   #status { font-size: 0.8rem; color: #6b7079; }
 </style>
 </head>
@@ -24,18 +27,10 @@
   <h1>Recruitment Copilot</h1>
   <p class="subtitle">Vista de solo lectura de lo que hizo el agente — el agente sugiere y anota, nunca decide. <span id="status"></span></p>
 
-  <h2>Categorías (Gold)</h2>
-  <table id="category-table">
-    <thead>
-      <tr><th>Categoría</th><th>Currículums</th><th>Palabras (prom.)</th><th>Leadership score (prom.)</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
   <h2>Shortlist actual</h2>
   <table id="shortlist-table">
     <thead>
-      <tr><th>Résumé ID</th><th>Categoría</th><th>Nota</th><th>Agregado por</th><th>Fecha</th></tr>
+      <tr><th>Résumé ID</th><th>Categoría</th><th>Puesto</th><th>Nota</th><th>Agregado por</th><th>Fecha</th></tr>
     </thead>
     <tbody></tbody>
   </table>
@@ -44,11 +39,7 @@
 async function refresh() {
   const statusEl = document.getElementById("status");
   try {
-    const [categories, shortlist] = await Promise.all([
-      fetch("/api/category_stats").then(r => r.json()),
-      fetch("/api/shortlist").then(r => r.json()),
-    ]);
-    renderCategories(categories);
+    const shortlist = await fetch("/api/shortlist").then(r => r.json());
     renderShortlist(shortlist);
     statusEl.textContent = "actualizado " + new Date().toLocaleTimeString();
   } catch (err) {
@@ -56,38 +47,32 @@ async function refresh() {
   }
 }
 
-function renderCategories(rows) {
-  const tbody = document.querySelector("#category-table tbody");
-  tbody.innerHTML = "";
-  for (const row of rows) {
-    const tr = document.createElement("tr");
-    const scoreClass = row.avg_leadership_score >= 0 ? "score-pos" : "score-neg";
-    tr.innerHTML = `
-      <td>${row.category}</td>
-      <td>${row.resume_count}</td>
-      <td>${row.avg_word_count}</td>
-      <td class="${scoreClass}">${row.avg_leadership_score}</td>`;
-    tbody.appendChild(tr);
-  }
-}
-
 function renderShortlist(rows) {
   const tbody = document.querySelector("#shortlist-table tbody");
   tbody.innerHTML = "";
   if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">Todavía no hay currículums en el shortlist.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Todavía no hay currículums en el shortlist.</td></tr>';
     return;
   }
-  for (const row of rows) {
+  rows.forEach((row, i) => {
     const tr = document.createElement("tr");
+    const jdToggle = row.job_description
+      ? `<br><span class="jd-toggle" data-target="jd-${i}">ver JD completa</span><div class="jd-full" id="jd-${i}">${row.job_description}</div>`
+      : "";
     tr.innerHTML = `
       <td>${row.resume_id}</td>
       <td>${row.category}</td>
+      <td>${row.job_title ?? ""}${jdToggle}</td>
       <td class="note">${row.note ?? ""}</td>
       <td>${row.added_by}</td>
       <td>${new Date(row.added_at).toLocaleString()}</td>`;
     tbody.appendChild(tr);
-  }
+  });
+  tbody.querySelectorAll(".jd-toggle").forEach(el => {
+    el.addEventListener("click", () => {
+      document.getElementById(el.dataset.target).classList.toggle("open");
+    });
+  });
 }
 
 refresh();

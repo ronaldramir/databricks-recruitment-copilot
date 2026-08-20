@@ -153,27 +153,33 @@ def find_matching_resumes(job_description: str, limit: int = 10) -> dict:
 
 
 @mcp.tool
-def get_shortlist(limit: int = 100) -> dict:
+def get_shortlist(limit: int = 100, job_title: str | None = None) -> dict:
     """
     Get the current candidate shortlist - résumés already flagged for human
     review, most recently flagged first.
 
     Args:
         limit: Max number of entries to return (default 100).
+        job_title: Optional filter - only entries flagged for this exact job
+            title (see shortlist_candidate). Omit to return every role.
 
     Returns:
         A dict with a `shortlist` list, each entry: resume_id, category,
-        note, added_by (email of whoever/whatever flagged it), added_at.
+        job_title, job_description (may be null - only set when the flag
+        came from a semantic search), note, added_by (email of
+        whoever/whatever flagged it), added_at.
     """
     try:
         rows = lakebase.run_query(
             """
-            SELECT resume_id, category, note, email AS added_by, added_at
+            SELECT resume_id, category, job_title, job_description, note,
+                   email AS added_by, added_at
             FROM candidate_shortlist
+            WHERE %(job_title)s IS NULL OR job_title = %(job_title)s
             ORDER BY added_at DESC
-            LIMIT %s
+            LIMIT %(limit)s
             """,
-            (limit,),
+            {"job_title": job_title, "limit": limit},
         )
         return {"status": "success", "count": len(rows), "shortlist": rows}
     except Exception as e:
@@ -182,7 +188,13 @@ def get_shortlist(limit: int = 100) -> dict:
 
 
 @mcp.tool
-def shortlist_candidate(resume_id: str, category: str, note: str) -> dict:
+def shortlist_candidate(
+    resume_id: str,
+    category: str,
+    note: str,
+    job_title: str,
+    job_description: str | None = None,
+) -> dict:
     """
     Flag a résumé for human review by adding it to the recruiter shortlist.
 
@@ -192,33 +204,54 @@ def shortlist_candidate(resume_id: str, category: str, note: str) -> dict:
     out, or how it compares to others in its category). The recruiter
     reviewing the shortlist makes the actual hiring decision, not this tool.
 
+    The same résumé can be shortlisted more than once for different roles -
+    each (recruiter, résumé, job_title) combination gets its own entry, so
+    flagging someone for a second role never overwrites the note from the
+    first.
+
     Args:
-        resume_id: The résumé's ID (from search_resumes or get_category_stats
-            context).
+        resume_id: The résumé's ID (from search_resumes, find_matching_resumes
+            or get_category_stats context).
         category: The résumé's job category.
         note: Why this résumé is being flagged for review - required, shown
-            to the human recruiter reading the shortlist.
+            to the human recruiter reading the shortlist. Cite the real
+            leadership_score or match_score, never editorialize it as
+            "high"/"low" - let the recruiter judge the number.
+        job_title: Short label for the role this candidate is being
+            considered for (e.g. "Data Engineering Lead"). If the search
+            that found this résumé was a plain category browse rather than a
+            specific opening, use the category name.
+        job_description: The exact job description text, only if this
+            candidate came from find_matching_resumes - pass it through
+            unchanged, never summarized or reworded. Omit otherwise.
 
     Returns:
         A dict confirming the résumé was added (or updated, if it was
-        already shortlisted) with who flagged it and when.
+        already shortlisted for this same job_title) with who flagged it and
+        when.
     """
     try:
         added_by = _get_end_user_email()
         lakebase.run_write(
             """
-            INSERT INTO candidate_shortlist (email, resume_id, category, note, added_at)
-            VALUES (%s, %s, %s, %s, NOW())
-            ON CONFLICT (email, resume_id)
-            DO UPDATE SET note = EXCLUDED.note, added_at = NOW()
+            INSERT INTO candidate_shortlist
+                (email, resume_id, category, job_title, job_description, note, added_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (email, resume_id, job_title)
+            DO UPDATE SET
+                job_description = EXCLUDED.job_description,
+                note = EXCLUDED.note,
+                added_at = NOW()
             """,
-            (added_by, resume_id, category, note),
+            (added_by, resume_id, category, job_title, job_description, note),
         )
         return {
             "status": "success",
-            "message": f"{resume_id} agregado al shortlist para revisión humana.",
+            "message": f"{resume_id} agregado al shortlist para revisión humana ({job_title}).",
             "resume_id": resume_id,
             "category": category,
+            "job_title": job_title,
+            "job_description": job_description,
             "note": note,
             "added_by": added_by,
         }

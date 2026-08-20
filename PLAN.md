@@ -57,8 +57,8 @@ Mismo esqueleto que `databricks-lakebase-app-day-3`: un agente con herramientas 
 |---|---|---|
 | MCP tool (lectura) | `get_category_stats`, `search_resumes` | Contexto para que el agente razone, sobre las tablas Gold. |
 | MCP tool (escritura) | `shortlist_candidate` | Paralelo directo de `place_trade` en day-3. Agrega el currículum a una lista para revisión humana. |
-| Lakebase | `candidate_shortlist` | Misma forma que `schema_watchlist.sql` de day-2/day-3: `email`, `resume_id`, `category`, `note`, `added_at`. |
-| Dashboard | `dashboard/app.py` | Lee la misma tabla `candidate_shortlist` — vista humana del shortlist en tiempo casi real. |
+| Lakebase | `candidate_shortlist` | `email`, `resume_id`, `category`, `job_title`, `job_description`, `note`, `added_at` — únique por `(email, resume_id, job_title)` así el mismo currículum puede quedar shortlisteado para más de un puesto. |
+| Dashboard | `dashboard/app.py` | Lee la misma tabla `candidate_shortlist` — vista humana del shortlist en tiempo casi real, con el puesto y la nota que motivó cada flag. No expone `gold_category_stats` (2026-08-19: eso queda para una Genie Space apuntada a Gold, no código a medida). |
 
 ### Human-in-the-loop (importante para el system prompt del agente)
 
