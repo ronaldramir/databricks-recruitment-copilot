@@ -107,25 +107,25 @@ Nunca redondees los números a ojo ni los inventes — citá siempre los valores
 
 ### Fase B — pasos manuales en tu workspace de Databricks (Free Edition)
 
-En orden:
+**Checkpoint 2026-08-18:** pasos 1–7 completos. Vector Search endpoint (`recruitment_copilot_vs`) e índice (`silver_resumes_index`) creados, en estado **"Provisioning resources..."** — puede tardar varios minutos en pasar a Online (recién creado + primera sincronización de ~2483 filas). **Retomar por el paso 8** (desplegar `mcp_server/`) — no hace falta esperar a que el índice esté Online para desplegar la App, solo para que `find_matching_resumes` funcione en runtime.
 
-1. **Provisionar Lakebase**: Compute → OLTP Database → Create. Copiar la connection URL.
-2. **Correr `mcp_server/schema_shortlist.sql`** contra esa instancia — desde el **SQL Editor de Databricks** o `psql` local. **No** lo corras con `psycopg2` desde un notebook serverless: Free Edition rompe `psycopg2` ahí con `FATAL FIPS SELFTEST FAILURE`.
-3. **Correr `setup_secrets.py`** (ya soporta Kaggle + Lakebase) para guardar la URL de Lakebase como secret.
-4. **Habilitar Change Data Feed en Silver** (requisito para un Delta Sync Index):
+1. [x] **Provisionar Lakebase**: Compute → OLTP Database → Create. Copiar la connection URL.
+2. [x] **Correr `mcp_server/schema_shortlist.sql`** contra esa instancia — desde el **SQL Editor de Databricks** o `psql` local. **No** lo corras con `psycopg2` desde un notebook serverless: Free Edition rompe `psycopg2` ahí con `FATAL FIPS SELFTEST FAILURE`.
+3. [x] **Correr `setup_secrets.py`** (ya soporta Kaggle + Lakebase) para guardar la URL de Lakebase como secret.
+4. [x] **Habilitar Change Data Feed en Silver** (requisito para un Delta Sync Index):
    ```sql
    ALTER TABLE recruitment_copilot.silver.silver_resumes
    SET TBLPROPERTIES (delta.enableChangeDataFeed = true);
    ```
-5. **Crear un Vector Search endpoint.**
-6. **Crear el Delta Sync Index** sobre `silver_resumes` — columna de embedding `clean_text`, PK `resume_id`, columna extra `category` — nombrado `recruitment_copilot.silver.silver_resumes_index`.
-7. **Conseguir el ID de tu SQL Warehouse** y reemplazar `REPLACE_WITH_YOUR_WAREHOUSE_ID` en `mcp_server/app.yaml` y `dashboard/app.yaml`.
-8. **Desplegar `mcp_server/`** como Databricks App: Compute → Apps → Create app → Custom, source = `mcp_server/`.
-9. **Desplegar `dashboard/`** como una **segunda** Databricks App, source = `dashboard/`. Free Edition permite hasta 3 Apps — esto usa 2.
-10. **Registrar el MCP server**: AI Gateway → MCPs → Add MCP, pegar la URL streamable-HTTP de la App del MCP server.
-11. **Construir y validar el agente en el Playground**: Tools → seleccionar el MCP recién registrado → pegar el system prompt de arriba → probar con preguntas reales → pegar los transcripts en "Demo Q&A" abajo. Una vez validado: Get Code → Export to Databricks Apps.
-12. Abrir la App del dashboard y confirmar que el shortlist armado por el agente se ve ahí.
-13. **Free Edition auto-detiene las Apps a las 24h de inactividad** — reiniciar `mcp_server`, `dashboard` y el agente exportado antes del check-in (24 ago) y la presentación (26 ago).
+5. [x] **Crear un Vector Search endpoint** (`recruitment_copilot_vs`).
+6. [x] **Crear el Delta Sync Index** sobre `silver_resumes` — columna de embedding `clean_text`, PK `resume_id`, columnas indexadas: todas (en blanco) — nombrado `recruitment_copilot.silver.silver_resumes_index`. *Verificar que el status haya pasado de "Provisioning" a "Online" antes de probar `find_matching_resumes`.*
+7. [x] **Conseguir el ID de tu SQL Warehouse** y reemplazar `REPLACE_WITH_YOUR_WAREHOUSE_ID` en `mcp_server/app.yaml` y `dashboard/app.yaml` (ya hecho: `f6d25ff69fb4c394`).
+8. [ ] **← PRÓXIMO PASO. Desplegar `mcp_server/`** como Databricks App: Compute → Apps → Create app → Custom, source = `mcp_server/` (dentro del Git Folder — hacer **Pull** primero para traer el `SQL_WAREHOUSE_ID` actualizado). Nombre sugerido: `recruiter-mcp`.
+9. [ ] **Desplegar `dashboard/`** como una **segunda** Databricks App, source = `dashboard/`. Free Edition permite hasta 3 Apps — esto usa 2.
+10. [ ] **Registrar el MCP server**: AI Gateway → MCPs → Add MCP, pegar la URL streamable-HTTP de la App del MCP server.
+11. [ ] **Construir y validar el agente en el Playground**: Tools → seleccionar el MCP recién registrado → pegar el system prompt de arriba → probar con preguntas reales → pegar los transcripts en "Demo Q&A" abajo. Una vez validado: Get Code → Export to Databricks Apps.
+12. [ ] Abrir la App del dashboard y confirmar que el shortlist armado por el agente se ve ahí.
+13. [ ] **Free Edition auto-detiene las Apps a las 24h de inactividad** — reiniciar `mcp_server`, `dashboard` y el agente exportado antes del check-in (24 ago) y la presentación (26 ago).
 
 ## Demo Q&A
 
