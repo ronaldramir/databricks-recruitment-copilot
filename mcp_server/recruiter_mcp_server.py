@@ -193,7 +193,7 @@ def shortlist_candidate(
     category: str,
     note: str,
     job_title: str,
-    job_description: str | None = None,
+    job_description: str,
 ) -> dict:
     """
     Flag a résumé for human review by adding it to the recruiter shortlist.
@@ -221,12 +221,13 @@ def shortlist_candidate(
             considered for (e.g. "Data Engineering Lead"). If the search
             that found this résumé was a plain category browse rather than a
             specific opening, use the category name.
-        job_description: REQUIRED if this candidate came from a
-            find_matching_resumes call earlier in this conversation - copy
-            the exact job_description text you passed to that call, word
-            for word, never summarized or reworded. Only omit this argument
-            if the candidate came from search_resumes or get_category_stats
-            instead (no free-text job description exists in that case).
+        job_description: This argument is ALWAYS required, every call. If
+            this candidate came from a find_matching_resumes call earlier in
+            this conversation, copy the exact job_description text you
+            passed to that call, word for word - never summarized or
+            reworded. If the candidate came from search_resumes or
+            get_category_stats instead (no free-text job description
+            exists), pass an empty string "" - never invent a description.
 
     Returns:
         A dict confirming the résumé was added (or updated, if it was
@@ -235,6 +236,7 @@ def shortlist_candidate(
     """
     try:
         added_by = _get_end_user_email()
+        job_description = job_description or None
         lakebase.run_write(
             """
             INSERT INTO candidate_shortlist
