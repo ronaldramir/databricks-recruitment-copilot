@@ -221,9 +221,12 @@ def shortlist_candidate(
             considered for (e.g. "Data Engineering Lead"). If the search
             that found this résumé was a plain category browse rather than a
             specific opening, use the category name.
-        job_description: The exact job description text, only if this
-            candidate came from find_matching_resumes - pass it through
-            unchanged, never summarized or reworded. Omit otherwise.
+        job_description: REQUIRED if this candidate came from a
+            find_matching_resumes call earlier in this conversation - copy
+            the exact job_description text you passed to that call, word
+            for word, never summarized or reworded. Only omit this argument
+            if the candidate came from search_resumes or get_category_stats
+            instead (no free-text job description exists in that case).
 
     Returns:
         A dict confirming the résumé was added (or updated, if it was
