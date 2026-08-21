@@ -7,8 +7,9 @@
 # MAGIC # Silver — limpieza y enriquecimiento
 # MAGIC
 # MAGIC Lee `bronze_resumes` (PDFs extraídos tal cual, sin tocar) y produce `silver_resumes`: texto
-# MAGIC normalizado, deduplicado, con los currículums no legibles apartados en cuarentena, y dos
-# MAGIC columnas derivadas para el análisis: `word_count` y `leadership_score`.
+# MAGIC normalizado, deduplicado, con los currículums no legibles apartados en cuarentena, y columnas
+# MAGIC derivadas para el análisis: `word_count`, `leadership_score`, `seniority_score`, `has_email`,
+# MAGIC `has_phone` y `contact_complete`.
 # MAGIC
 # MAGIC Escritura con `mode("overwrite")`: Silver siempre se recalcula entero desde Bronze, así que
 # MAGIC correr esta celda dos veces con el mismo Bronze da exactamente el mismo resultado — esa es
@@ -82,11 +83,24 @@ deduped_df = readable_df.dropDuplicates(["resume_id"])
 # MAGIC - `leadership_score`: heurística de palabras clave — cuenta términos de liderazgo ("led",
 # MAGIC   "managed", "architected", "founded") menos términos de rol de apoyo ("assisted",
 # MAGIC   "supported", "helped"), con `\b` para no matchear substrings dentro de otras palabras.
+# MAGIC - `seniority_score`: misma heurística, pero sobre títulos de seniority — cuenta términos
+# MAGIC   como "senior", "director", "vp", "chief", "principal", "head of" menos términos junior
+# MAGIC   ("junior", "intern", "entry level", "trainee"). Es una señal distinta de
+# MAGIC   `leadership_score`: uno mide *lenguaje* de liderazgo (verbos de acción), el otro mide
+# MAGIC   *título* declarado — un currículum puede tener uno alto y el otro bajo.
+# MAGIC - `has_email` / `has_phone` / `contact_complete`: detección por regex de un email o teléfono
+# MAGIC   en el texto — señal de qué tan "listo para contactar" está un currículum sin abrir el PDF.
 
 # COMMAND ----------
 
 LEADERSHIP_TERMS = ["led", "managed", "architected", "founded"]
 SUPPORT_TERMS = ["assisted", "supported", "helped"]
+
+SENIOR_TERMS = ["senior", "director", "vp", "chief", "principal", "head of", "executive"]
+JUNIOR_TERMS = ["junior", "intern", "entry level", "entry-level", "trainee"]
+
+EMAIL_REGEX = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+PHONE_REGEX = r"\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
 
 
 def term_hits(text_col, terms):
@@ -103,7 +117,18 @@ enriched_df = (
         term_hits(F.col("clean_text"), LEADERSHIP_TERMS)
         - term_hits(F.col("clean_text"), SUPPORT_TERMS),
     )
-    .select("resume_id", "category", "clean_text", "word_count", "leadership_score")
+    .withColumn(
+        "seniority_score",
+        term_hits(F.col("clean_text"), SENIOR_TERMS)
+        - term_hits(F.col("clean_text"), JUNIOR_TERMS),
+    )
+    .withColumn("has_email", F.col("clean_text").rlike(EMAIL_REGEX))
+    .withColumn("has_phone", F.col("clean_text").rlike(PHONE_REGEX))
+    .withColumn("contact_complete", F.col("has_email") & F.col("has_phone"))
+    .select(
+        "resume_id", "category", "clean_text", "word_count", "leadership_score",
+        "seniority_score", "has_email", "has_phone", "contact_complete",
+    )
 )
 
 # COMMAND ----------
@@ -130,7 +155,9 @@ print(f"Silver:      {spark.table(SILVER_TABLE).count()} filas")
 display(spark.sql(f"""
     SELECT category, COUNT(*) AS resume_count,
            ROUND(AVG(word_count), 1) AS avg_word_count,
-           ROUND(AVG(leadership_score), 2) AS avg_leadership_score
+           ROUND(AVG(leadership_score), 2) AS avg_leadership_score,
+           ROUND(AVG(seniority_score), 2) AS avg_seniority_score,
+           ROUND(AVG(CAST(contact_complete AS INT)) * 100, 1) AS pct_contact_complete
     FROM {SILVER_TABLE}
     GROUP BY category
     ORDER BY resume_count DESC

@@ -6,7 +6,14 @@ Pipeline medallion end-to-end sobre currículums en PDF (dataset [Resume Dataset
 
 ## Pregunta de negocio
 
-¿Qué categorías de currículums muestran más señales de experiencia y liderazgo, y qué candidatos destacan dentro de cada una?
+¿Qué categorías de currículums muestran más señales de experiencia y liderazgo, y qué candidatos destacan dentro de cada una? *(principal, respondida por `gold_category_stats` + `gold_top_candidates`)*
+
+Gold responde además cuatro preguntas extra para el equipo de reclutamiento — ver [`gold/03_gold_metrics.py`](gold/03_gold_metrics.py):
+
+1. ¿La seniority declarada en el CV (títulos "senior"/"director"/"vp") coincide con el lenguaje de liderazgo, o son señales distintas? (`gold_category_stats`, columna `avg_seniority_score`)
+2. ¿Qué categorías tienen currículums listos para contactar de inmediato (traen email/teléfono detectables)? (`gold_contact_quality`)
+3. ¿Un currículum más largo realmente comunica más liderazgo, o `word_count` solo mide verborragia? (`gold_length_vs_leadership`)
+4. ¿En qué categorías el pipeline pierde más candidatos por PDFs no legibles? (`gold_category_health`, cruza Bronze con la cuarentena de Silver)
 
 ## Arquitectura
 
@@ -23,10 +30,13 @@ recruitment_copilot.bronze.bronze_resumes            (raw_text tal cual, checkpo
       │  normalizar, cuarentena, dedupe, word_count/leadership_score  [silver/02_silver_transform.py]
       ▼
 recruitment_copilot.silver.silver_resumes            (mode overwrite)
-      │  groupBy category  /  window ranking por leadership_score      [gold/03_gold_metrics.py]
+      │  groupBy category  /  window ranking / terciles / joins con Bronze  [gold/03_gold_metrics.py]
       ▼
-recruitment_copilot.gold.gold_category_stats         (responde la pregunta de negocio)
-recruitment_copilot.gold.gold_top_candidates          (ranking, opcional)
+recruitment_copilot.gold.gold_category_stats          (pregunta de negocio principal)
+recruitment_copilot.gold.gold_top_candidates          (ranking por categoría, extra)
+recruitment_copilot.gold.gold_contact_quality         (% listos para contactar, extra)
+recruitment_copilot.gold.gold_length_vs_leadership    (¿largo del CV correlaciona con liderazgo?, extra)
+recruitment_copilot.gold.gold_category_health         (tasa de cuarentena por categoría, extra)
 ```
 
 Orquestación: Job de Databricks con 3 tareas encadenadas (`bronze → silver → gold`), `trigger(availableNow=True)` + checkpoint en Bronze, `mode("overwrite")` idempotente en Silver/Gold. Idempotencia demostrada corriendo el Job dos veces seguidas.
@@ -115,6 +125,7 @@ Nunca redondees los números a ojo ni los inventes — citá siempre los valores
 
 - Bronze/Silver/Gold corridos de punta a punta en Databricks, con idempotencia demostrada (Job con 3 tareas, corrido dos veces, mismos conteos).
 - Código completo del MCP server, el dashboard y Vector Search — falta desplegarlo (Fase B).
+- **Pendiente (2026-08-20):** Silver ganó tres columnas derivadas (`seniority_score`, `has_email`/`has_phone`/`contact_complete`) y Gold ganó tres tablas nuevas (`gold_contact_quality`, `gold_length_vs_leadership`, `gold_category_health`) — código listo, **falta correr el Job de punta a punta en Databricks** para materializarlas y completar los párrafos de respuesta en `gold/03_gold_metrics.py` con los números reales. `resume_broker.py`/el MCP server siguen leyendo solo `gold_category_stats`/`gold_top_candidates`, sin cambios — exponer las tablas nuevas como tools es opcional, no bloqueante para la entrega.
 
 ### Fase B — pasos manuales en tu workspace de Databricks (Free Edition)
 
